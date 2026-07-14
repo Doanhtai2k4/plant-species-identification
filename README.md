@@ -95,3 +95,12 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+1. Build release lại
+   cd "D:\MOBILE APP\MyReactNativeApp\android"; .\gradlew assembleRelease
+2. Gỡ app cũ để xóa model/data cũ
+   adb -s R9HT504W14B uninstall com.myreactnativeapp
+3. Cài APK mới
+   adb -s R9HT504W14B install "D:\MOBILE APP\MyReactNativeApp\android\app\build\outputs\apk\release\app-release.apk"
+4. Mở app trên điện thoại để test
+   adb -s R9HT504W14B shell monkey -p com.myreactnativeapp -c android.intent.category.LAUNCHER 1
