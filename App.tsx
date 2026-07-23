@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import RNFS from 'react-native-fs';
 import TreeLabelOcrScreen from './src/screens/TreeLabelOcrScreen';
+
 import { identifyPlantWithPlantNet } from './src/ml/plantNetApi';
 // import { loadPlantModel, predictPlantFromImageFile } from './src/ml/plantModel';
+import {
+  getFastCurrentLocation,
+  getImprovedCurrentLocation,
+} from './src/ml/locationService';
 import {
   ActivityIndicator,
   Image,
@@ -43,6 +48,48 @@ function PlantCameraScreen() {
   const [capturedPhotoUri, setCapturedPhotoUri] = useState('');
   const [screenMode, setScreenMode] = useState<'plant' | 'ocr'>('plant');
   // const [isModelReady, setIsModelReady] = useState(false);
+
+  const [locationText, setLocationText] = useState('');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  const getLocationQualityText = (accuracy: number) => {
+    if (accuracy <= 25) {
+      return 'Tốt - có thể lưu vị trí cây';
+    }
+
+    if (accuracy <= 50) {
+      return 'Tạm được - vị trí hơi lệch';
+    }
+
+    return 'Chưa chính xác - nên bấm Cải thiện độ chính xác';
+  };
+
+  const formatLocationText = (location: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    sampleCount: number;
+    source?: string;
+  }) => {
+    const quality =
+      location.accuracy <= 25
+        ? 'Tốt'
+        : location.accuracy <= 50
+          ? 'Tạm'
+          : 'Lệch';
+
+    const sourceText =
+      location.source === 'improved'
+        ? 'GPS'
+        : location.source === 'fallback'
+          ? 'Chưa tốt hơn'
+          : 'Nhanh';
+
+    return (
+      `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}\n` +
+      `Sai số: ±${location.accuracy.toFixed(0)}m • ${quality} • ${sourceText}`
+    );
+  };
 
   useEffect(() => {
     if (!hasPermission) {
@@ -87,6 +134,40 @@ function PlantCameraScreen() {
   //     isMounted = false;
   //   };
   // }, [hasPermission]);
+  const handleGetFastLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      setLocationText('Đang lấy vị trí nhanh...');
+
+      const location = await getFastCurrentLocation();
+
+      setLocationText(formatLocationText(location));
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : JSON.stringify(error);
+
+      setLocationText(`Lỗi vị trí: ${message}`);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+  const handleImproveLocation = async () => {
+    try {
+      setIsGettingLocation(true);
+      setLocationText('Đang cải thiện độ chính xác GPS...');
+
+      const location = await getImprovedCurrentLocation();
+
+      setLocationText(formatLocationText(location));
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : JSON.stringify(error);
+
+      setLocationText(`Lỗi vị trí: ${message}`);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
 
   const handleCapturePhoto = async () => {
     try {
@@ -258,6 +339,30 @@ function PlantCameraScreen() {
         <Text style={styles.resultTitle}>Kết quả</Text>
         <Text style={styles.resultText}>{result}</Text>
 
+        {locationText !== '' && (
+          <Text style={styles.resultText}>{locationText}</Text>
+        )}
+
+        <View style={styles.locationButtonGroup}>
+          <TouchableOpacity
+            style={[styles.button, isGettingLocation && styles.buttonDisabled]}
+            onPress={handleGetFastLocation}
+            disabled={isGettingLocation}>
+            <Text style={styles.buttonText}>
+              {isGettingLocation ? 'Đang lấy vị trí...' : 'Lấy vị trí cây'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, isGettingLocation && styles.buttonDisabled]}
+            onPress={handleImproveLocation}
+            disabled={isGettingLocation}>
+            <Text style={styles.buttonText}>
+              {isGettingLocation ? 'Đang xử lý...' : 'Cải thiện độ chính xác'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {lastPhotoPath !== '' && (
           <Text style={styles.photoPath} numberOfLines={1}>
             Ảnh: {lastPhotoPath}
@@ -312,6 +417,10 @@ function PlantCameraScreen() {
 }
 
 const styles = StyleSheet.create({
+  locationButtonGroup: {
+    gap: 10,
+    marginBottom: 14,
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#0F3D2E',
