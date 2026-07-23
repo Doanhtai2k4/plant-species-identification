@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import RNFS from 'react-native-fs';
+import TreeLabelOcrScreen from './src/screens/TreeLabelOcrScreen';
 import { identifyPlantWithPlantNet } from './src/ml/plantNetApi';
 // import { loadPlantModel, predictPlantFromImageFile } from './src/ml/plantModel';
 import {
@@ -40,12 +41,18 @@ function PlantCameraScreen() {
   const [result, setResult] = useState('Chưa quét cây');
   const [lastPhotoPath, setLastPhotoPath] = useState('');
   const [capturedPhotoUri, setCapturedPhotoUri] = useState('');
+  const [screenMode, setScreenMode] = useState<'plant' | 'ocr'>('plant');
   // const [isModelReady, setIsModelReady] = useState(false);
+
   useEffect(() => {
     if (!hasPermission) {
       requestPermission();
     }
   }, [hasPermission, requestPermission]);
+
+  if (screenMode === 'ocr') {
+    return <TreeLabelOcrScreen onBack={() => setScreenMode('plant')} />;
+  }
 
   // useEffect(() => {
   //   let isMounted = true;
@@ -217,7 +224,17 @@ function PlantCameraScreen() {
         {/* <Text style={styles.subtitle}>Đưa cây vào khung hình rồi bấm quét</Text> */}
         <Text style={styles.subtitle}>Đưa cây vào khung hình rồi bấm Chụp ảnh</Text>
       </View>
+      <View style={styles.modeRow}>
+        <TouchableOpacity style={styles.modeButtonActive}>
+          <Text style={styles.modeButtonActiveText}>Nhận diện cây</Text>
+        </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.modeButton}
+          onPress={() => setScreenMode('ocr')}>
+          <Text style={styles.modeButtonText}>Đọc bảng cây</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.cameraBox}>
         <Camera
           style={StyleSheet.absoluteFill}
@@ -407,6 +424,37 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#0F3D2E',
     fontSize: 16,
+    fontWeight: '800',
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    backgroundColor: '#F4FBF6',
+  },
+  modeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#E8F5EE',
+    alignItems: 'center',
+  },
+  modeButtonActive: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#17A65B',
+    alignItems: 'center',
+  },
+  modeButtonText: {
+    color: '#0F3D2E',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  modeButtonActiveText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '800',
   },
 });
